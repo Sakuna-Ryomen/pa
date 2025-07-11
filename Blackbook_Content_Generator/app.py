@@ -4,22 +4,20 @@ import os
 import io
 import cohere
 import logging
-from dotenv import load_dotenv
-from pyngrok import ngrok
-
-
-# Load environment variables from .env file
-load_dotenv()
-
-# Get Cohere API key
-api_key = os.getenv("COHERE_API_KEY")
-
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 
 # Valid sections
 valid_sections = ["Introduction", "Problem Statement", "Objective", "Methodology", "Literature Review", "Future Scope"]
+
+# Get API key from Streamlit secrets
+def get_api_key():
+    try:
+        return st.secrets["COHERE_API_KEY"]
+    except KeyError:
+        st.sidebar.error("❌ COHERE_API_KEY not found in Streamlit secrets. Please set it in app settings.")
+        st.stop()
 
 
 def generate_content(section, domain, title, api_key):
@@ -136,21 +134,6 @@ These future developments will contribute to the continuous evolution of {domain
     }
     return templates.get(section, f"Content for {section} section of {title} project in {domain} domain.")
 
-# Launch ngrok tunnel to Streamlit default port 8501
-# Safe ngrok tunnel creation — only once
-if "ngrok_tunnel" not in st.session_state:
-    try:
-        public_url = ngrok.connect(8501, bind_tls=True)
-        st.session_state["ngrok_tunnel"] = public_url
-        st.sidebar.success("✅ Ngrok tunnel created")
-    except Exception as e:
-        st.sidebar.error(f"❌ Ngrok Error: {e}")
-        st.stop()
-else:
-    public_url = st.session_state["ngrok_tunnel"]
-
-st.sidebar.markdown(f"🌐 **Public Link:** [Open App]({public_url})")
-
 # === Streamlit App ===
 st.set_page_config(page_title="Blackbook Content Generator", layout="wide")
 st.title("📚 Blackbook Content Generator using AI")
@@ -169,23 +152,8 @@ for different sections of a project blackbook.
 - Powered by Cohere Command R+ (FREE tier available)
 """)
 
-# Sidebar - API Key
-st.sidebar.title("Configuration")
-st.sidebar.markdown("""
-**Steps to get FREE API key:**
-1. Visit [cohere.ai](https://cohere.ai)
-2. Create a free account
-3. Go to API keys section
-4. Generate a new API key
-5. Paste below 👇
-""")
-
-api_key = os.getenv("COHERE_API_KEY", "")
-if api_key:
-    st.sidebar.success("✅ API Key loaded from .env")
-else:
-    st.sidebar.error("⚠️ API Key not found. Please add it to .env file.")
-
+# Load API key securely
+api_key = get_api_key()
 
 # Main content
 st.markdown("### Project Details")
